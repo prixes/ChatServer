@@ -62,7 +62,7 @@ public class General {
 			try {
 				fileLogger.receiveMessage(str);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -73,7 +73,7 @@ public class General {
 			try {
 				fileLogger.receiveMessage(str);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}

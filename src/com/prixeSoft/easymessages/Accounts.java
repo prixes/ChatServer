@@ -35,14 +35,15 @@ public class Accounts {
 
 	// adding new name
 	private void newName(String name) throws IOException {
+		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
-
 		writer.newLine();
 		writer.close();
 	}
 
 	// whole process when server wants to proceed new login
 	public String login(String user) throws IOException {
+		
 		if (checkNameExistanse(user) == true) {
 			int randomPIN = (int) (Math.random() * 9000) + 1000;
 			return login(user + String.valueOf(randomPIN));

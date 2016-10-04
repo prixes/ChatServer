@@ -15,22 +15,19 @@ public class Server {
 
 	private Accounts accounts;
 	private ArrayList<ClientThread> arrayOfClients;
-
-
+	private ServerSocket serverSocket = null;
+	private Socket socket =new Socket();
+	
 	private static final SimpleDateFormat time = new SimpleDateFormat("HH:mm:ss");;
 	private int port;
 	private boolean keepGoing = true;
 
-	private ServerSocket serverSocket = null;
-	private Socket socket =new Socket();
 	// construction of the server and account//button listener
 	public Server(int port) {
 		
 		this.port = port;
-		
 		arrayOfClients = new ArrayList<ClientThread>();
 		accounts = new Accounts();
-		
 		
 	}
 
@@ -40,26 +37,26 @@ public class Server {
 	}
 	
 	//server status
-	public boolean checkStatus()
-	{
+	public boolean checkStatus() {
 		return keepGoing;
 	}
 	
 	// server start
-	public void start() {
+	public void start()  {
+		
 		try {
 			serverSocket = new ServerSocket(port);
+			
 			while (keepGoing) {
 				if (!keepGoing)
 					break;
 				else {
 				display("Server waiting for Clients on port " + port + ".");
-
 				socket = serverSocket.accept(); //can't close it properly 
 				ClientThread newClientThread = new ClientThread(socket);
 				arrayOfClients.add(newClientThread);
 				newClientThread.start();
-			}
+				}
 			} 		
 			
 		} catch (IOException e) {
@@ -72,21 +69,17 @@ public class Server {
 	protected void stop() {
 		
 		keepGoing = false;
-		
-		for (int i = 0; i < arrayOfClients.size(); ++i) {
-			ClientThread threadForClosing = arrayOfClients.get(i);
-			try {
-				threadForClosing.streamInput.close();
-				threadForClosing.streamOutput.close();
-				threadForClosing.socket.close();
-			} catch (IOException io) {
-				System.out.print(io.toString());
-			}
-		}
 		try {
-			serverSocket.close();
-			socket.close();
-
+		for (int i = 0; i < arrayOfClients.size(); ++i) {
+			
+			ClientThread threadForClosing = arrayOfClients.get(i);
+			//socket.getOutputStream().close();
+			//socket.getOutputStream().close();
+				threadForClosing.socket.close();
+		}
+		serverSocket.close();
+		socket.close();
+		
 		} catch (IOException e) {
 			System.out.print(e.toString());
 			e.printStackTrace();
@@ -95,21 +88,26 @@ public class Server {
 
 	// display message with time stamp
 	private void display(String msg) {
+		
 		String time = getMessageDate() + " " + msg;
 		System.out.println(time);
 	}
 
 	// getting date in correct form
 	String getMessageDate() {
+		
 		String result = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 		return " " + result + " -";
 	}
 
 	// broadcasting all messages to users
 	private synchronized void broadcast(String username,String message) {
+		
 		String messageReady = getMessageDate() + " " + username + ": " + message + "\n";
 		System.out.print(messageReady);
+		
 		for (int i = arrayOfClients.size(); --i >= 0;) {
+			
 			ClientThread clientThread = arrayOfClients.get(i);
 			if (!clientThread.writeMsg(messageReady)) {
 				arrayOfClients.remove(i);
@@ -121,6 +119,7 @@ public class Server {
     // remove client from the online users
 	synchronized void remove(int id) {
 		for (int i = 0; i < arrayOfClients.size(); ++i) {
+			
 			ClientThread clientThread = arrayOfClients.get(i);
 			if (clientThread.id == id) {
 				arrayOfClients.remove(i);
@@ -131,32 +130,21 @@ public class Server {
 
 	// this thread will run for each client
 	class ClientThread extends Thread {
-		Socket socket;
-		ObjectInputStream streamInput;
-		ObjectOutputStream streamOutput;
-
 		int id;
-		String username;
-		//com.prixeSoft.easymessages.ChatMessage chatMsg;
-		ComProtobuf.msg msg ;
-		String date;
+		String username , date;
 
+		Socket socket;
+		ComProtobuf.msg msg ;
+		
 		ClientThread(Socket socket) {
 			
 			this.socket = socket;
 			try {
-				//streamOutput = new ObjectOutputStream(socket.getOutputStream());
-				//streamInput = new ObjectInputStream(socket.getInputStream());
-				
-					msg  = ComProtobuf.msg.parseDelimitedFrom(socket.getInputStream());
-				System.out.print("WTF");
-				//if(msg.getType().hashCode() == 3){
+				msg  = ComProtobuf.msg.parseDelimitedFrom(socket.getInputStream());
 				username = msg.getTo();
 				username = accounts.login(username);
-				
-				
-				
 				serverNameReport(username);
+				
 				//probably have to add something :D
 				display(username + " just connected.");
 			} catch (IOException e) {
@@ -170,24 +158,17 @@ public class Server {
 		public void run() {
 			//boolean keepGoing = true;
 			while (keepGoing) {
-					
-					try {
-						
-						//System.out.print(socket.getInputStream());
-						//DataInputStream in = new DataInputStream(socket.getInputStream());
-						msg  = ComProtobuf.msg.parseDelimitedFrom(socket.getInputStream());
-						if( msg == null ) 
-						{
-							display(username + " disconnected with a LOGOUT message.");
-							keepGoing=false; socket.close();
-						} else {
+				try {
+					msg  = ComProtobuf.msg.parseDelimitedFrom(socket.getInputStream());
+					if( msg == null ) {
+						display(username + " disconnected with a LOGOUT message.");
+						keepGoing=false; socket.close();
+					} else {
 						takeAction();
-						 }
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					}
-					
+				} catch (IOException e) {
+					e.printStackTrace();
+					}	
 			}
 			remove(id);
 			close();
@@ -201,7 +182,6 @@ public class Server {
 			try {
 				writeName.build().writeDelimitedTo(socket.getOutputStream());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
@@ -209,6 +189,7 @@ public class Server {
 		}
 		void takeAction() {
 			switch (msg.getType()) {
+			
 			case MESSAGE:
 				broadcast( msg.getFrom(),msg.getMessage());
 				break;
@@ -235,10 +216,6 @@ public class Server {
 		// on close
 		private void close() {
 			try {
-				if (streamOutput != null)
-					streamOutput.close();
-				if (streamInput != null)
-					streamInput.close();
 				if (socket != null)
 					socket.close();
 			} catch (Exception e) {
@@ -253,17 +230,18 @@ public class Server {
 				close();
 				return false;
 			}
-			
-				//streamOutput.writeObject(msg);
+
 				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
 				writeMsg.setTypeValue(1);
 				writeMsg.setMessage(msg);
 				
 				try {
-				writeMsg.build().writeDelimitedTo(socket.getOutputStream());
+					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
+				
+				
 				} catch (IOException e) {
-				e.printStackTrace();
-				System.out.print(e.toString());
+					e.printStackTrace();
+					System.out.print(e.toString());
 			}
 			return true;
 		}
