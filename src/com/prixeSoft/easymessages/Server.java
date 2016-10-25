@@ -124,6 +124,7 @@ public class Server {
 					arrayOfClients.remove(i);
 					display("Disconnected Client " + arrayOfClients.get(i).username + " removed from list.");
 				}
+				break;
 			}
 		}
 	}
