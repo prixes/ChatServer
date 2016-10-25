@@ -1,7 +1,6 @@
 package com.prixeSoft.easymessages;
+
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
@@ -116,6 +115,20 @@ public class Server {
 		}
 	}
 	
+	// PM to specific user
+	void privateMessage(String from,String to,String message){
+		String messageReady = getMessageDate() + " (PM) " + from + ": " + message + "\n";
+		for(int i=0;i<arrayOfClients.size();i++) {
+			if(arrayOfClients.get(i).username.equals(to)) {
+				if (!arrayOfClients.get(i).writeMsg(messageReady)) {
+					arrayOfClients.remove(i);
+					display("Disconnected Client " + arrayOfClients.get(i).username + " removed from list.");
+				}
+			}
+		}
+	}
+	
+	
     // remove client from the online users
 	synchronized void remove(int id) {
 		for (int i = 0; i < arrayOfClients.size(); ++i) {
@@ -135,6 +148,7 @@ public class Server {
 
 		Socket socket;
 		ComProtobuf.msg msg ;
+		boolean alive = true;
 		
 		ClientThread(Socket socket) {
 			
@@ -157,12 +171,13 @@ public class Server {
 		// on run of the thread
 		public void run() {
 			//boolean keepGoing = true;
-			while (keepGoing) {
+			while (alive) {
 				try {
+					if(! socket.isClosed())
 					msg  = ComProtobuf.msg.parseDelimitedFrom(socket.getInputStream());
 					if( msg == null ) {
-						display(username + " disconnected with a LOGOUT message.");
-						keepGoing=false; socket.close();
+						display(username + " disconnected with a QUIT message.");
+						alive = false; socket.close();
 					} else {
 						takeAction();
 					}
@@ -194,9 +209,9 @@ public class Server {
 				broadcast( msg.getFrom(),msg.getMessage());
 				break;
 			case LOGOUT:
-				display(username + " disconnected with a LOGOUT message.");
 				close();
-				keepGoing = false;
+				display(username + " disconnected with a LOGOUT message.");
+				alive = false;
 				break;
 			case ONLINEUSERS:
 				writeMsg("List of the users connected at " + time.format(new Date()) + "\n");
@@ -209,6 +224,8 @@ public class Server {
 				ClientThread theClient = arrayOfClients.get(arrayOfClients.size() - 1);
 				writeMsg(theClient.username);
 				break;
+			case PM:
+				privateMessage( msg.getFrom(),msg.getTo(),msg.getMessage());
 			default:
 				break;
 			}
@@ -216,14 +233,36 @@ public class Server {
 		// on close
 		private void close() {
 			try {
-				if (socket != null)
+				if (socket != null){
+					alive= false;
 					socket.close();
+				}
 			} catch (Exception e) {
 				System.out.print(e.toString());
 				e.printStackTrace();
 			}
 		}
 
+		// write message with 2 arguments means its PM
+		boolean writeMsg(String from,String message){
+			if (!socket.isConnected()) {
+				close();
+				return false;
+			}
+				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
+				writeMsg.setTypeValue(4);
+				writeMsg.setFrom(from);
+				writeMsg.setMessage(message);
+				try {
+					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.out.print(e.toString());
+				}
+				return true;
+			
+		}
 		// sending message to user
 		private boolean writeMsg(String msg) {
 			if (!socket.isConnected()) {
