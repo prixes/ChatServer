@@ -40,6 +40,7 @@ public class Server {
 		return keepGoing;
 	}
 	
+	
 	// server start
 	public void start()  {
 		
@@ -69,11 +70,8 @@ public class Server {
 		
 		keepGoing = false;
 		try {
-		for (int i = 0; i < arrayOfClients.size(); ++i) {
-			
+		for (int i = 0; i < arrayOfClients.size(); ++i) {			
 			ClientThread threadForClosing = arrayOfClients.get(i);
-			//socket.getOutputStream().close();
-			//socket.getOutputStream().close();
 				threadForClosing.socket.close();
 		}
 		serverSocket.close();
@@ -105,8 +103,7 @@ public class Server {
 		String messageReady = getMessageDate() + " " + username + ": " + message + "\n";
 		System.out.print(messageReady);
 		
-		for (int i = arrayOfClients.size(); --i >= 0;) {
-			
+		for (int i = arrayOfClients.size(); --i >= 0;) {	
 			ClientThread clientThread = arrayOfClients.get(i);
 			if (!clientThread.writeMsg(messageReady)) {
 				arrayOfClients.remove(i);
@@ -123,12 +120,11 @@ public class Server {
 				
 		for(int i=0;i<arrayOfClients.size();i++) {
 			if(arrayOfClients.get(i).username.equals(to)) {
+				
 				if (!arrayOfClients.get(i).writeMsg(from,messageReady)) {
-					
 					arrayOfClients.remove(i);
 					display("Disconnected Client " + arrayOfClients.get(i).username + " removed from list.");
 				}
-				
 				return true;		
 			}		
 		}
@@ -152,7 +148,6 @@ public class Server {
 	class ClientThread extends Thread {
 		int id;
 		String username , date;
-
 		Socket socket;
 		ComProtobuf.msg msg ;
 		boolean alive = true;
@@ -199,8 +194,8 @@ public class Server {
 		void serverNameReport(String username)  {
 			
 			ComProtobuf.msg.Builder writeName = ComProtobuf.msg.newBuilder();
-			writeName.setTypeValue(3);
-			writeName.setTo(username);
+			writeName.setTypeValue(3)
+					 .setTo(username);
 			try {
 				writeName.build().writeDelimitedTo(socket.getOutputStream());
 			} catch (IOException e) {
@@ -232,8 +227,6 @@ public class Server {
 				writeMsg(theClient.username);
 				break;
 			case PM:
-					
-				
 				if(!privateMessage( msg.getFrom(),msg.getTo(),msg.getMessage())) 
 					returnMsg( msg.getTo(),   "   Person is not online!");
 				else
@@ -264,9 +257,9 @@ public class Server {
 				return false;
 			}
 				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
-				writeMsg.setTypeValue(4);
-				writeMsg.setFrom(to);
-				writeMsg.setMessage(messageReady);
+				writeMsg.setTypeValue(4)
+						.setFrom(to)
+						.setMessage(messageReady);
 				try {
 					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
 					
@@ -284,9 +277,9 @@ public class Server {
 				return false;
 			}
 				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
-				writeMsg.setTypeValue(4);
-				writeMsg.setFrom(from);
-				writeMsg.setMessage(message);
+				writeMsg.setTypeValue(4)
+						.setFrom(from)
+						.setMessage(message);
 				try {
 					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
 					
@@ -302,8 +295,8 @@ public class Server {
 			if (socket.isClosed())  return false;
 			
 				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
-				writeMsg.setTypeValue(1);
-				writeMsg.setMessage(msg);
+				writeMsg.setTypeValue(1)
+						.setMessage(msg);
 				try {
 					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
 				
