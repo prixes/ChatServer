@@ -115,18 +115,24 @@ public class Server {
 		}
 	}
 	
+
+	String messageReady;
 	// PM to specific user
-	void privateMessage(String from,String to,String message){
-		String messageReady = getMessageDate() + " (PM) " + from + ": " + message + "\n";
+	boolean privateMessage(String from,String to,String message){
+		messageReady= getMessageDate() + " << " + from + ": " + message + "\n";   
+				
 		for(int i=0;i<arrayOfClients.size();i++) {
 			if(arrayOfClients.get(i).username.equals(to)) {
-				if (!arrayOfClients.get(i).writeMsg(messageReady)) {
+				if (!arrayOfClients.get(i).writeMsg(from,messageReady)) {
+					
 					arrayOfClients.remove(i);
 					display("Disconnected Client " + arrayOfClients.get(i).username + " removed from list.");
 				}
-				break;
-			}
+				
+				return true;		
+			}		
 		}
+		return false;
 	}
 	
 	
@@ -226,7 +232,13 @@ public class Server {
 				writeMsg(theClient.username);
 				break;
 			case PM:
-				privateMessage( msg.getFrom(),msg.getTo(),msg.getMessage());
+					
+				
+				if(!privateMessage( msg.getFrom(),msg.getTo(),msg.getMessage())) 
+					returnMsg( msg.getTo(),   "   Person is not online!");
+				else
+					returnMsg( msg.getTo(), msg.getMessage() );
+			
 			default:
 				break;
 			}
@@ -244,6 +256,27 @@ public class Server {
 			}
 		}
 
+		// write message with 2 arguments means its PM
+		boolean returnMsg(String to,String message){
+			messageReady= getMessageDate() + " >> " + to + ": " + message + "\n";
+			if (!socket.isConnected()) {
+				close();
+				return false;
+			}
+				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
+				writeMsg.setTypeValue(4);
+				writeMsg.setFrom(to);
+				writeMsg.setMessage(messageReady);
+				try {
+					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.out.print(e.toString());
+				}
+				return true;
+			
+		}
 		// write message with 2 arguments means its PM
 		boolean writeMsg(String from,String message){
 			if (!socket.isConnected()) {
@@ -266,18 +299,13 @@ public class Server {
 		}
 		// sending message to user
 		private boolean writeMsg(String msg) {
-			if (!socket.isConnected()) {
-				close();
-				return false;
-			}
-
+			if (socket.isClosed())  return false;
+			
 				ComProtobuf.msg.Builder writeMsg = ComProtobuf.msg.newBuilder();
 				writeMsg.setTypeValue(1);
 				writeMsg.setMessage(msg);
-				
 				try {
 					writeMsg.build().writeDelimitedTo(socket.getOutputStream());
-				
 				
 				} catch (IOException e) {
 					e.printStackTrace();
